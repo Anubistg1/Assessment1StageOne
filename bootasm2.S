@@ -2,6 +2,20 @@
 
 .code16                         # Assemble for 16-bit mode
 .globl start
+
+#define dx  -2
+#define x0  -4
+#define x1  -6
+#define dy  -8
+#define y0  -10
+#define y1  -12
+#define c   -14
+#define sx  -16
+#define sy  -18
+#define err -20
+#define e1  -22
+#define e2  -24
+
 start:
     jmp     real_start
 
@@ -41,12 +55,67 @@ cons_writeline:
 real_start:
     movw    $boot_message, %si  # Display our boot message
     call    cons_writeline
+    call    video_mode
 
 endless_loop:                   # Loop forever more
     jmp     endless_loop    
+
+Set_sx:
+    mov sx(%bp), $-1
+    ret
+
+Set_sy:
+    mov sx(%bp), $-1
+    ret
+
+Check_Y_equals:
+
+video_mode:
+    movb    $0, %ah
+    movb    $0x13, %al
+    int     $0x10
+
+drawline:
+    push %bp
+    movw %sp, %bp
+    subw $4, %sp # Reserve sapce for variables
+    movw x1(%bp), %ax
+    subw %ax, 0x(%bp)    # x1 - x0
+    movw dx(%bp), %ax   # result in dx
+    movw y1(%bp), %ax
+    subw %ax, 0y(%bp)    # y1 - y0
+    movw dy(%bp), %ax   # result in dy
+    mov sx(%bp), $1
+    cmp x1(%bp), x0(%bp) # Sets sx
+    jl Set_sx
+    mov sy(%bp), $1
+    cmp y1(%bp), y0(%bp) # Sets sy
+    jl Set_sy
+    movw dx(%bp), %ax
+    subw %ax, dy(%bp)    # dx - dy
+    movw err(%bp), %ax   # result in dy
+
+plot_pixels:
+    movb    $0x0C, %ah
+    movb    $15, %al    # Pixel colour
+    movb    $0, %bh     # Video page number
+    mov    $78, %cx     # Column number
+    mov    $50, %dx     # Row Number
+    int     $0x10
+
+    cmp x0(%bp), x1(%bp)
+    je
 
 # Program data
 
 boot_message:     
     .string "Boot Loader Stage 2 loaded"             
 
+pixel_one_data:
+    .string "9"     # Pixel colour
+    .string "40"    # x location
+    .string "70"    # y location
+
+pixel_two_data:
+    .string "85"    # x location
+    .string "7"    # y location
