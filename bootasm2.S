@@ -3,18 +3,19 @@
 .code16                         # Assemble for 16-bit mode
 .globl start
 
-#define dx  -2
+#define changex  -2
 #define x0  -4
 #define x1  -6
-#define dy  -8
+#define changey  -8
 #define y0  -10
 #define y1  -12
 #define c   -14
 #define sx  -16
 #define sy  -18
 #define err -20
-#define e1  -22
-#define e2  -24
+#define e2  -22
+#define col -24
+
 
 start:
     jmp     real_start
@@ -55,67 +56,112 @@ cons_writeline:
 real_start:
     movw    $boot_message, %si  # Display our boot message
     call    cons_writeline
+    movb    $15, %al
+    movb    $50, %dh
+    movb    $65, %dl
+    movb    $34, %ch
+    movb    $24, %cl
     call    video_mode
 
 endless_loop:                   # Loop forever more
     jmp     endless_loop    
 
-Set_sx:
-    mov sx(%bp), $-1
-    ret
 
-Set_sy:
-    mov sx(%bp), $-1
-    ret
 
 Check_Y_equals:
+    movb x0(%bp), %al
+    cmp %al, x1(%bp)
+    call endless_loop
+
 
 video_mode:
     movb    $0, %ah
     movb    $0x13, %al
     int     $0x10
+    call drawline
+
+Set_sx:
+    movw $-1, sx(%bp)
+    
+
+Set_sy:
+    movw $-1, sy(%bp)
+    
 
 drawline:
+    movb    %al, (col)
+    movb    %dh, (y1)
+    movb    %dl, (y0)
+    movb    %ch, (x1)
+    movb    %cl, (x0)
     push %bp
     movw %sp, %bp
-    subw $4, %sp # Reserve sapce for variables
+    subw $4, %sp # Reserve space for variables
     movw x1(%bp), %ax
-    subw %ax, 0x(%bp)    # x1 - x0
-    movw dx(%bp), %ax   # result in dx
+    subw %ax, x0(%bp)    # x1 - x0
+    movw changex(%bp), %ax   # result in dx
     movw y1(%bp), %ax
-    subw %ax, 0y(%bp)    # y1 - y0
-    movw dy(%bp), %ax   # result in dy
-    mov sx(%bp), $1
-    cmp x1(%bp), x0(%bp) # Sets sx
+    subw %ax, y0(%bp)    
+    movw changey(%bp), %ax   # result in dy
+    movw $1, sx(%bp)
+    movw x1(%bp), %ax
+    cmp %ax, x0(%bp) # Sets sx
     jl Set_sx
-    mov sy(%bp), $1
-    cmp y1(%bp), y0(%bp) # Sets sy
+    movw $1, sy(%bp)
+    movw y1(%bp), %ax
+    cmp %ax, y0(%bp) # Sets sy
     jl Set_sy
-    movw dx(%bp), %ax
-    subw %ax, dy(%bp)    # dx - dy
+    movw changex(%bp), %ax
+    subw %ax, changey(%bp)    # dx - dy
     movw err(%bp), %ax   # result in dy
+    call plot_pixels
 
+X_pixel_change:
+    movw err(%bp), %ax
+    addw %ax, changey(%bp)    # err + dy
+    movw err(%bp), %ax   # result in err
+    movw x0(%bp), %ax
+    addw %ax, sx(%bp)    # sx + x0
+    movw x0(%bp), %ax   # result in x0
+
+
+Y_pixel_change:
+    movw err(%bp), %ax
+    addw %ax, changex(%bp)    # err + dy
+    movw err(%bp), %ax   # result in derr
+    movw y0(%bp), %ax
+    addw %ax, sy(%bp)    # sy + y0
+    movw y0(%bp), %ax   # result in y0 
+    
 plot_pixels:
-    movb    $0x0C, %ah
-    movb    $15, %al    # Pixel colour
-    movb    $0, %bh     # Video page number
-    mov    $78, %cx     # Column number
-    mov    $50, %dx     # Row Number
-    int     $0x10
+    movw x0(%bp), %ax
+    cmp %ax, x1(%bp)
+    je Check_Y_equals # checks to exit loop
+    movw err(%bp), %ax
+    imul $2, %ax
+    movw e2(%bp), %ax # sets e2
+    movw changey(%bp), %ax
+    movw $-1, %dx
+    imul %dx # multiplies by -1 for the cmp, when doing the maths bidmas means changing the next equation
+    movw %ax, changey(%bp)
+    movw e2(%bp), %ax
+    cmp %ax, changey(%bp)
+    jge X_pixel_change
+    movw e2(%bp), %ax
+    cmp %ax, changex(%bp)
+    jl Y_pixel_change
 
-    cmp x0(%bp), x1(%bp)
-    je
+    movb    $0x0C, %ah
+    movb    col(%bp), %al    # Pixel colour
+    movb    $0, %bh     # Video page number
+    mov     x0(%bp), %cx     # Column number
+    mov     y0(%bp), %dx     # Row Number
+    int     $0x10
+    ret
 
 # Program data
 
 boot_message:     
     .string "Boot Loader Stage 2 loaded"             
 
-pixel_one_data:
-    .string "9"     # Pixel colour
-    .string "40"    # x location
-    .string "70"    # y location
 
-pixel_two_data:
-    .string "85"    # x location
-    .string "7"    # y location
