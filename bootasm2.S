@@ -145,7 +145,7 @@ X_pixel_change:
     movw x0(%bp), %ax   # result in x0
 
 Y_pixel_change:
-movw e2(%bp), %ax
+    movw e2(%bp), %ax
     cmp %ax, changex(%bp)
     jge draw_pixel
     movw err(%bp), %ax
@@ -157,12 +157,12 @@ movw e2(%bp), %ax
 
 draw_pixel:
     movb    $0x0C, %ah
-    movb    col(%bp), %al    # Pixel colour  currently works with $15
+    movb    col, %al    # Pixel colour  currently works with $15
     movb    $0, %bh     # Video page number
     mov     x0(%bp), %cx     # Column number
     mov     y0(%bp), %dx     # Row Number
     int     $0x10
-    jmp plot_pixels
+    jmp     plot_pixels
 
 End_Of_Line:
     movb    $0x0C, %ah
@@ -178,4 +178,4 @@ End_Of_Line:
 boot_message:     
     .string "Boot Loader Stage 2 loaded"             
 
-
+# .word variables
