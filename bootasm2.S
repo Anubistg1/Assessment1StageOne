@@ -57,11 +57,11 @@ real_start:
     movw    $boot_message, %si  # Display our boot message
     call    cons_writeline
     call    video_mode
-    movb    $15, %al
-    movb    $50, %dh
-    movb    $65, %dl
-    movb    $34, %ch
-    movb    $24, %cl
+    movw    $15, %si
+    movw    $50, %ax
+    movw    $65, %bx
+    movw    $34, %cx
+    movw    $24, %dx
     call    drawline_absolute_X
 
 endless_loop:                   # Loop forever more
@@ -83,36 +83,37 @@ video_mode:
     ret
 
 drawline_absolute_X:
-    movb    %al, (col)
-    movb    %dh, (y1)
-    movb    %dl, (y0)
-    movb    %ch, (x1)
-    movb    %cl, (x0)
+    movw    %si, (col)
+    movw    %ax, (y1)
+    movw    %bx, (y0)
+    movw    %cx, (x1)
+    movw    %dx, (x0)
     push %bp
     movw %sp, %bp
     subw $4, %sp # Reserve space for variables
+
     movw x1(%bp), %ax
     subw %ax, x0(%bp)    # x1 - x0
-    movw changex(%bp), %ax   # result in dx
-    movw y1(%bp), %ax
-    subw %ax, y0(%bp)    
-    movw changey(%bp), %ax   # result in dy
-    movw $1, sx(%bp)
-    movw x1(%bp), %ax
-    cmp %ax, x0(%bp) # Sets sx
-    jl drawline_absolute_Y
-    movw $-1, sx(%bp)
-    imul sx(%bp)
+    jns move_dx_into_variable
+    movw $-1, %dx
+    imul %dx # makes %ax positive
+    movw $-1, sx(%bp) # sets sx -1 as x0 < x1
+move_dx_into_variable:
+    movw %ax, changex(%bp) # maintains positive
+    movw $1, sx(%bp) # sets sx 1 as x0 => x1
 
-drawline_absolute_Y:
-    movw $1, sy(%bp)
+get_absolute_y:
     movw y1(%bp), %ax
-    cmp %ax, y0(%bp) # Sets sy
-    jl set_dx_dy
-    movw $-1, sy(%bp)
-    imul sy(%bp)
+    subw %ax, y0(%bp)    # y1 - y0
+    jns move_dy_into_variable
+    movw $-1, %dx
+    imul %dx # makes %ax positive
+    movw $-1, sy(%bp) # sets sy -1 as y0 < y1
+move_dy_into_variable:
+    movw %ax, changey(%bp) # maintains positive
+    movw $1, sy(%bp) # sets sy -1 as y0 < y1
 
-set_dx_dy:
+set_err:
     movw changex(%bp), %ax
     subw %ax, changey(%bp)    # dx - dy
     movw err(%bp), %ax   # result in dy
