@@ -180,14 +180,16 @@ move_dy_into_variable:
     movw $1, sy # sets sy 1 as y0 < y1
 
 set_err:
-    movw changex(%bp), %ax
-    subw %ax, changey(%bp)    # dx - dy
-    movw err(%bp), %ax   # result in dy also break it in current form fix swap them around
-    
+    movw changex, %ax
+    subw %ax, changey    # dx - dy
+    movw err, %ax   # result in dy also break it in current form fix swap them around
+    pushw err
+    pushw $10
+    call cons_write_number
 
 plot_pixels:
-    movw x0(%bp), %ax
-    cmp %ax, x1(%bp)
+    movw x0, %ax
+    cmp %ax, x1         # current maths check
     jne pixel_calc
     movb y0(%bp), %al
     cmp %al, y1(%bp)     # checks to exit loop
