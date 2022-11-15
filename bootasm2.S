@@ -115,22 +115,25 @@ cons_writeline:
 real_start:
     movw    $boot_message, %si  # Display our boot message
     call    cons_writeline
-                                # call    video_mode
+     call    video_mode
     movw    $15, %si
-    movw    $10, %ax
-    movw    $1, %bx
-    movw    $10, %cx
-    movw    $12, %dx
+    movw    $30, %ax
+    movw    $10, %bx
+    movw    $27, %cx
+    movw    $13, %dx
     call    drawline_absolute_X
 
 endless_loop:                   # Loop forever more
-    jmp     endless_loop    
+    pushw x0
+    pushw $10
+    call cons_write_number
+    jmp endless_loop    
 
 
 
 Check_Y_equals:
-    movb x0(%bp), %al
-    cmp %al, x1(%bp)    
+    movb x0, %al
+    cmp %al, x1    
     ret
     
 
@@ -170,7 +173,7 @@ move_dx_into_variable:
 
 get_absolute_y:
     movw y1, %ax
-    subw %ax, y0    # y1 - y0
+    subw y0, %ax    # y1 - y0
     jns move_dy_into_variable
     movw $-1, %dx
     imul %dx # makes %ax positive
@@ -181,58 +184,59 @@ move_dy_into_variable:
 
 set_err:
     movw changex, %ax
-    subw %ax, changey    # dx - dy
-    movw err, %ax   # result in dy also break it in current form fix swap them around
-    pushw err
-    pushw $10
-    call cons_write_number
+    subw changey, %ax    # dx - dy
+    movw %ax, err   # result in dy also break it in current form fix swap them around
 
 plot_pixels:
     movw x0, %ax
     cmp %ax, x1         # current maths check
     jne pixel_calc
-    movb y0(%bp), %al
-    cmp %al, y1(%bp)     # checks to exit loop
+    movb y0, %al
+    cmp %al, y1    # checks to exit loop
     je endless_loop
     
 
 pixel_calc:
-    movw err(%bp), %ax
+    movw err, %ax
     imul $2, %ax
-    movw %ax, e2(%bp) # sets e2
-    movw changey(%bp), %ax
+    movw %ax, e2 # sets e2
+    movw changey, %ax
     movw $-1, %dx
     imul %dx # multiplies by -1 for the cmp, when doing the maths bidmas means changing the next equation e2 = 2 * err
-    movw %ax, changey(%bp)
-    movw e2(%bp), %ax
-    cmp changey(%bp), %ax # Possible error location
-    jle Y_pixel_change
+    # movw %ax, changey
+    # movw e2, %ax
+    cmp %ax, e2 
+    je Y_pixel_change
 
 X_pixel_change:
-    movw err(%bp), %ax
-    subw %ax, changey(%bp)    # err - dy
-    movw %ax, err(%bp)   # result in err
-    movw x0(%bp), %ax
-    addw %ax, sx(%bp)    # sx + x0
-    movw %ax, x0(%bp)   # result in x0
+    movw err, %ax
+    subw changey, %ax    # err - dy
+    movw %ax, err   # result in err
+    movw x0, %ax
+    addw sx, %ax    # sx + x0
+    movw %ax, x0   # result in x0
+   # pushw x0
+   # pushw $10
+   # call cons_write_number
+   # call cons_write_crlf
 
 Y_pixel_change:
-    movw e2(%bp), %ax
-    cmp %ax, changex(%bp) # other possible error
+    movw e2, %ax
+    cmp %ax, changex # other possible error
     jge draw_pixel
-    movw err(%bp), %ax
-    addw %ax, changex(%bp)    # err + dy
-    movw %ax, err(%bp)   # result in err
-    movw y0(%bp), %ax
-    addw %ax, sy(%bp)    # sy + y0
-    movw %ax, y0(%bp)   # result in y0     
+    movw err, %ax
+    addw %ax, changex    # err + dy
+    movw %ax, err   # result in err
+    movw y0, %ax
+    addw %ax, sy    # sy + y0
+    movw %ax, y0   # result in y0     
 
 draw_pixel:
     movb    $0x0C, %ah
     movb    col, %al    # Pixel colour  currently works with $15
     movb    $0, %bh     # Video page number
-    mov     x0(%bp), %cx     # Column number
-    mov     y0(%bp), %dx     # Row Number
+    mov     x0, %cx     # Column number
+    mov     y0, %dx     # Row Number
     int     $0x10
     jmp     plot_pixels
 
