@@ -147,6 +147,14 @@ drawline_absolute_X:
     movw    %bx, y0(%bp)
     movw    %cx, x1(%bp)
     movw    %dx, x0(%bp)
+    movw    $1, %si
+    movw    %si, sx(%bp)
+    movw    %si, err(%bp)
+    movw    %si, sy(%bp)
+    movw    %si, changey(%bp)
+    movw    %si, c(%bp)
+    movw    %si, e2(%bp)
+    movw    %si, changex(%bp)
     push %bp
     movw %sp, %bp
     subw $4, %sp # Reserve space for variables
@@ -155,24 +163,21 @@ drawline_absolute_X:
     jns move_dx_into_variable
     movw $-1, %dx
     imul %dx # makes %ax positive
-    movw $-1, sx(%bp) # sets sx -1 as x0 < x1
-    pushw sx
-    pushw $10
-    call cons_write_number
+    movw $-1, sx # sets sx -1 as x0 < x1    
 move_dx_into_variable:
     movw %ax, changex # maintains positive
     movw $1, sx # sets sx 1 as x0 => x1
 
 get_absolute_y:
-    movw y1(%bp), %ax
-    subw %ax, y0(%bp)    # y1 - y0
+    movw y1, %ax
+    subw %ax, y0    # y1 - y0
     jns move_dy_into_variable
     movw $-1, %dx
     imul %dx # makes %ax positive
-    movw $-1, sy(%bp) # sets sy -1 as y0 < y1
+    movw $-1, sy # sets sy -1 as y0 < y1
 move_dy_into_variable:
-    movw %ax, changey(%bp) # maintains positive
-    movw $1, sy(%bp) # sets sy -1 as y0 < y1
+    movw %ax, changey # maintains positive
+    movw $1, sy # sets sy 1 as y0 < y1
 
 set_err:
     movw changex(%bp), %ax
