@@ -112,31 +112,12 @@ cons_writeline:
     call    cons_write_crlf
     ret    
 
-real_start:
-    movw    $boot_message, %si  # Display our boot message
-    call    cons_writeline
-     call    video_mode
-    movw    $15, %si
-    movw    $30, %ax
-    movw    $10, %bx
-    movw    $27, %cx
-    movw    $13, %dx
-    call    drawline_absolute_X
-
-endless_loop:                   # Loop forever more
-    pushw x0
-    pushw $10
-    call cons_write_number
-    jmp endless_loop    
-
-
 
 Check_Y_equals:
     movb x0, %al
     cmp %al, x1    
     ret
     
-
 
 video_mode:
     movb    $0, %ah
@@ -160,13 +141,19 @@ drawline_absolute_X:
     movw    %si, changex(%bp)
     push %bp
     movw %sp, %bp
-    subw $4, %sp # Reserve space for variables
+    subw $30, %sp # Reserve space for variables
     movw x1, %ax
+   # pushw x1
+   # pushw $10
+   # call cons_write_number
+   # call cons_write_crlf 
     subw x0, %ax    # x1 - x0
     jns move_dx_into_variable
     movw $-1, %dx
     imul %dx # makes %ax positive
-    movw $-1, sx # sets sx -1 as x0 < x1    
+    movw $-1, sx # sets sx -1 as x0 < x1
+    movw %ax, changex
+    jmp get_absolute_y    
 move_dx_into_variable:
     movw %ax, changex # maintains positive
     movw $1, sx # sets sx 1 as x0 => x1
@@ -178,6 +165,8 @@ get_absolute_y:
     movw $-1, %dx
     imul %dx # makes %ax positive
     movw $-1, sy # sets sy -1 as y0 < y1
+    movw %ax, changey 
+    jmp set_err
 move_dy_into_variable:
     movw %ax, changey # maintains positive
     movw $1, sy # sets sy 1 as y0 < y1
@@ -186,27 +175,36 @@ set_err:
     movw changex, %ax
     subw changey, %ax    # dx - dy
     movw %ax, err   # result in dy also break it in current form fix swap them around
+    # pushw err
+    # pushw $10
+    # call cons_write_number
+    # call cons_write_crlf 
 
 plot_pixels:
     movw x0, %ax
     cmp %ax, x1         # current maths check
     jne pixel_calc
-    movb y0, %al
-    cmp %al, y1    # checks to exit loop
-    je endless_loop
+    movw y0, %ax
+    cmp %ax, y1    # checks to exit loop
+    jne pixel_calc
+    jmp End_Of_Line
     
 
 pixel_calc:
     movw err, %ax
     imul $2, %ax
     movw %ax, e2 # sets e2
+    # pushw e2
+    # pushw $10
+    # call cons_write_number
+    # call cons_write_crlf 
     movw changey, %ax
     movw $-1, %dx
     imul %dx # multiplies by -1 for the cmp, when doing the maths bidmas means changing the next equation e2 = 2 * err
     # movw %ax, changey
     # movw e2, %ax
-    cmp %ax, e2 
-    je Y_pixel_change
+    cmp e2, %ax 
+    jg Y_pixel_change
 
 X_pixel_change:
     movw err, %ax
@@ -215,24 +213,24 @@ X_pixel_change:
     movw x0, %ax
     addw sx, %ax    # sx + x0
     movw %ax, x0   # result in x0
-   # pushw x0
-   # pushw $10
-   # call cons_write_number
-   # call cons_write_crlf
 
 Y_pixel_change:
     movw e2, %ax
     cmp %ax, changex # other possible error
-    jge draw_pixel
+    jle draw_pixel
     movw err, %ax
-    addw %ax, changex    # err + dy
+    addw changex, %ax    # err + dx
     movw %ax, err   # result in err
     movw y0, %ax
-    addw %ax, sy    # sy + y0
-    movw %ax, y0   # result in y0     
+    addw sy, %ax    # sy + y0
+    movw %ax, y0   # result in y0    
+    # pushw sy
+    # pushw $10
+    # call cons_write_number
+    # call cons_write_crlf 
 
 draw_pixel:
-    movb    $0x0C, %ah
+    movb    $0x0C, %ah # Pass things in via registers!
     movb    col, %al    # Pixel colour  currently works with $15
     movb    $0, %bh     # Video page number
     mov     x0, %cx     # Column number
@@ -241,15 +239,96 @@ draw_pixel:
     jmp     plot_pixels
 
 End_Of_Line:
-    movb    $0x0C, %ah
-    movb    $11, %al    # Pixel colour
-    movb    $0, %bh     # Video page number
-    mov     $64, %cx     # Column number
-    mov     $64, %dx     # Row Number
-    int     $0x10     
+   # pushw y0
+   # pushw $10
+   # call cons_write_number
+   # call cons_write_crlf 
+    movw %bp, %sp
+    pop %bp     
     ret    
 
 # Program data
+real_start:
+    movw    $boot_message, %si  # Display our boot message
+    call    cons_writeline
+    call    video_mode
+    # Line 1
+    movw    $15, %si # colour white
+    movw    $190, %ax # y1
+    movw    $160, %bx # y0
+    movw    $75, %cx # x1
+    movw    $30, %dx # x0
+    call    drawline_absolute_X
+    # Line 2
+    movw    $14, %si # colour yellow
+    movw    $45, %ax # y1
+    movw    $67, %bx # y0
+    movw    $87, %cx # x1
+    movw    $87, %dx # x0
+    call    drawline_absolute_X
+    # Line 3
+    movw    $13, %si # colour light magenta
+    movw    $144, %ax # y1
+    movw    $144, %bx # y0
+    movw    $50, %cx # x1
+    movw    $79, %dx # x0
+    call    drawline_absolute_X
+    # Line 4
+    movw    $12, %si # colour light red
+    movw    $34, %ax # y1
+    movw    $145, %bx # y0
+    movw    $100, %cx # x1
+    movw    $300, %dx # x0
+    call    drawline_absolute_X
+    # Line 5
+    movw    $11, %si # colour light cyan
+    movw    $145, %ax # y1
+    movw    $34, %bx # y0
+    movw    $100, %cx # x1
+    movw    $300, %dx # x0
+    call    drawline_absolute_X
+    # Line 6
+    movw    $10, %si # colour light green
+    movw    $18, %ax # y1
+    movw    $26, %bx # y0
+    movw    $56, %cx # x1
+    movw    $75, %dx # x0
+    call    drawline_absolute_X
+    # Line 7
+    movw    $9, %si # colour light blue
+    movw    $10, %ax # y1
+    movw    $24, %bx # y0
+    movw    $15, %cx # x1
+    movw    $38, %dx # x0
+    call    drawline_absolute_X
+    # Line 8
+    movw    $8, %si # colour dark grey
+    movw    $10, %ax # y1
+    movw    $26, %bx # y0
+    movw    $140, %cx # x1
+    movw    $90, %dx # x0
+    call    drawline_absolute_X
+    # Line 9
+    movw    $7, %si # colour light grey
+    movw    $50, %ax # y1
+    movw    $70, %bx # y0
+    movw    $60, %cx # x1
+    movw    $80, %dx # x0
+    call    drawline_absolute_X
+    # Line 10
+    movw    $6, %si # colour brown
+    movw    $100, %ax # y1
+    movw    $120, %bx # y0
+    movw    $120, %cx # x1
+    movw    $140, %dx # x0
+    call    drawline_absolute_X
+
+endless_loop:                   # Loop forever more
+    # pushw x0
+    # pushw $10
+    # call cons_write_number
+    # call cons_write_crlf 
+    jmp endless_loop    
 
 boot_message:     
     .string "Boot Loader Stage 2 loaded"             
