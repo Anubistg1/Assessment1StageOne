@@ -143,10 +143,6 @@ drawline_absolute_X:
     movw %sp, %bp
     subw $30, %sp # Reserve space for variables
     movw x1, %ax
-   # pushw x1
-   # pushw $10
-   # call cons_write_number
-   # call cons_write_crlf 
     subw x0, %ax    # x1 - x0
     jns move_dx_into_variable
     movw $-1, %dx
@@ -175,10 +171,6 @@ set_err:
     movw changex, %ax
     subw changey, %ax    # dx - dy
     movw %ax, err   # result in dy also break it in current form fix swap them around
-    # pushw err
-    # pushw $10
-    # call cons_write_number
-    # call cons_write_crlf 
 
 plot_pixels:
     movw x0, %ax
@@ -194,15 +186,9 @@ pixel_calc:
     movw err, %ax
     imul $2, %ax
     movw %ax, e2 # sets e2
-    # pushw e2
-    # pushw $10
-    # call cons_write_number
-    # call cons_write_crlf 
     movw changey, %ax
     movw $-1, %dx
     imul %dx # multiplies by -1 for the cmp, when doing the maths bidmas means changing the next equation e2 = 2 * err
-    # movw %ax, changey
-    # movw e2, %ax
     cmp e2, %ax 
     jg Y_pixel_change
 
@@ -224,10 +210,7 @@ Y_pixel_change:
     movw y0, %ax
     addw sy, %ax    # sy + y0
     movw %ax, y0   # result in y0    
-    # pushw sy
-    # pushw $10
-    # call cons_write_number
-    # call cons_write_crlf 
+
 
 draw_pixel:
     movb    $0x0C, %ah # Pass things in via registers!
@@ -239,10 +222,6 @@ draw_pixel:
     jmp     plot_pixels
 
 End_Of_Line:
-   # pushw y0
-   # pushw $10
-   # call cons_write_number
-   # call cons_write_crlf 
     movw %bp, %sp
     pop %bp     
     ret    
@@ -324,10 +303,6 @@ real_start:
     call    drawline_absolute_X
 
 endless_loop:                   # Loop forever more
-    # pushw x0
-    # pushw $10
-    # call cons_write_number
-    # call cons_write_crlf 
     jmp endless_loop    
 
 boot_message:     
